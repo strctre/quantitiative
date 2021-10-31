@@ -1,5 +1,5 @@
 ---
-title: "SES 5215: Assignment 1"
+title: "SES 5215: Assignment 1&2"
 author: "Sai Joshi, Jialei Tang, Yuanzhao Wang "
 date: "2021/10/22"
 output: html_document
@@ -10,8 +10,11 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
 ```
 
 ```{r, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
+library(tidyverse)
 library(sf)
 library(knitr)
+library(readxl)
+library(gridExtra)
 ```
 
 # Research Question
@@ -27,27 +30,26 @@ Riffat, S., Powell, R. & Aydin, D. Future cities and environmental sustainabilit
 
 # Sample population
 
-The cities of which data on wellbeing, emissions, energy mix, vulnerability assessment and water risks could be obtained.
+The cities of which data on wellbeing, emissions, energy mix, vulnerability assessment and  could be obtained.
 
 # Variables
 
 ## Categorical Variables (2)
 
-* Energy Mix (Source of electricity) ( > 30% renewable energy)
-* Vulnerability Assessment (2017)
-* Water Risks
+* Vulnerability Assessment 
+* C40 Status
 
-## Continuous Variables (3)
+## Continuous Variables (4)
 
-* Emissions (2020)
-* Wellbeing index (2020)
+* Emissions
+* Wellbeing index 
 * Population density
-
+* Energy Mix (Source of electricity) 
 
 # Number of observations (rows) in our data set
 
 ```{r, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
-main <- st_read("combined_r.csv")
+main <- st_read("values_variablesonly.xlsx")
 total <- st_read("combinedmain_valuesonlyr.csv")
 ```
 
@@ -55,7 +57,7 @@ Number of Observations:
 
 291 Observations (Rows/Cities)
 
-In our preliminary round of research, we identified 48 out of 292 cities that can provide us with data on the well-being index. There are some gaps in data for the other variables (namely emissions and water risks, which would bring the number of cities to 28) 
+In our preliminary round of research, we identified 45 out of 292 cities that can provide us with data on the well-being index. There are some gaps in data for the other variables (namely emissions and water risks, which would bring the number of cities to 28) 
 
 We intend to collate further data to include in the event that the number of cities are insufficient for analysis.
 ```{r, warning = FALSE, message = FALSE, echo = TRUE}
@@ -64,7 +66,185 @@ kable(head(total))
 ```{r, warning = FALSE, message = FALSE, echo = TRUE}
 kable(head(main))
 ```
+# Reading our data
+
+## Our continuous variables are:
+
+* Emissions 
+* Wellbeing index 
+* Population density
+* Energy Mix (Source of electricity) 
+
+```{r read xlsx, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
+data <- read_xlsx(path = "values_variablesonly.xlsx", 
+                      sheet = "Sheet1")
+energy_t_test <- t.test(data$PercentageRenewable)
+dens_t_test <- t.test(data$PopulationDensity)
+emission_t_test <- t.test(data$TotalEmissions)
+wellbeing_t_test <- t.test(data$WellBeing)
+```                  
 
 
+```{r calculate continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
 
+energy_quartiles <- quantile(data$PercentageRenewable, na.rm = TRUE)
+dens_quartiles <- quantile(data$PopulationDensity, na.rm = TRUE)
+emission_quartiles <- quantile(data$TotalEmissions, na.rm = TRUE)
+wellbeing_quartiles <- quantile(data$WellBeing, na.rm = TRUE)
+
+energy_dev <- sd(data$PercentageRenewable, na.rm = TRUE)
+dens_dev <- sd(data$PopulationDensity, na.rm = TRUE)
+emission_dev <- sd(data$TotalEmissions, na.rm = TRUE)
+wellbeing_dev <- sd(data$WellBeing, na.rm = TRUE)
+
+energy_hist <- ggplot(data) +
+  geom_histogram(aes(x = PercentageRenewable),
+                 bins = 30)
+
+dens_hist <- ggplot(data) +
+  geom_histogram(aes(x = PopulationDensity),
+                 bins = 30) +
+  scale_x_continuous(trans = "log")
+
+emission_hist <- ggplot(data) +
+  geom_histogram(aes(x = TotalEmissions),
+                 bins = 30)
+
+wellbeing_hist <- ggplot(data) +
+  geom_histogram(aes(x = WellBeing),
+                 bins = 30)
+```
+
+
+```{r display continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
+
+cont_summary <- tibble(`Variable` = c("Percentage of Renewable energy", 
+               "Population density (people per square kilometers)", 
+               "Total Emissions (metric tonnes CO2e)",
+               "WellBeing scores"),
+
+`Sample mean` = c(energy_t_test$estimate,
+                    dens_t_test$estimate,
+                    emission_t_test$estimate,
+                    wellbeing_t_test$estimate* 1000),
+
+`Population mean (95% confidence) - low` = 
+    c(energy_t_test$conf.int[1],
+      dens_t_test$conf.int[1],
+      emission_t_test$conf.int[1],
+      wellbeing_t_test$conf.int[1]* 1000),
+`Population mean (95% confidence) - high` =
+    c(energy_t_test$conf.int[2],
+      dens_t_test$conf.int[2],
+      emission_t_test$conf.int[2],
+      wellbeing_t_test$conf.int[2] * 1000),
+`Median` = c(energy_quartiles[3],
+             dens_quartiles[3],
+             emission_quartiles[3],
+             wellbeing_quartiles[3] * 1000),
+`Interquartile range` = c(energy_quartiles[4] - energy_quartiles[2],
+                            dens_quartiles[4] - dens_quartiles[2],
+                            emission_quartiles[4] - emission_quartiles[2],
+                            wellbeing_quartiles[4] - wellbeing_quartiles[2]* 1000),
+`Standard deviation` = c(energy_dev,
+                          dens_dev,
+                          emission_dev,
+                          wellbeing_dev* 1000))
+
+kable(cont_summary, digits = 0)
+```
+
+```{r display histograms, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
+
+pretty_energy_hist <- energy_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Percentage of Renewable energy") +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+pretty_dens_hist <- dens_hist +
+  theme_bw() + 
+  scale_x_continuous(name = "Population density\n(residents per square kilometer)",
+                     trans = "log",
+                     breaks = c(0.1, 1, 10, 100, 1000, 10000),
+                     labels = c("0.1", "1", "10", "100", "1000", "10,000")) +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+pretty_emission_hist = emission_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Total Emissions",
+                     breaks = seq(0, 0.3, by=.05),
+                     labels = seq(0, 300, by = 50)) +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90)) 
+  
+pretty_wellbeing_hist = wellbeing_hist +
+  theme_bw() +
+  scale_x_continuous(name = "WellBeing scores",
+                     breaks = seq(0, 0.3, by=.05),
+                     labels = seq(0, 300, by = 50)) +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+grid.arrange(pretty_energy_hist, pretty_dens_hist, pretty_emission_hist, pretty_wellbeing_hist,
+             ncol = 2, nrow = 2)
+```
+# Sample Proportion for each Category
+
+## Our categorical variables are:
+
+* Vulnerability Assessment
+* C40 Status
+
+```{r}
+pct_C40 <- t.test(main$C40_Status == "C40")
+pct_nonC40 <- t.test(main$C40_Status == "No")
+```
+
+```{r}
+cat_summary_C40 <- tibble(`C40 Cities` = 
+                              c("C40",
+                                "Non C40"),
+                            `Sample proportion` = 
+                              c(pct_C40$estimate * 100,
+                                pct_nonC40$estimate *100),
+                            `95-percent confidence - low` = 
+                              c(pct_C40$conf.int[1] * 100,
+                                pct_nonC40$conf.int[1] * 100),
+                            `95-percent confidence - high` = 
+                              c(pct_C40$conf.int[2] * 100,
+                                pct_nonC40$conf.int[2] * 100))
+
+kable(cat_summary_C40, digits = 0)
+```
+# The 95-percent confidence interval for the population proportion in each category
+
+```{r}
+pct_VAdone <- t.test(main$Vadone == "Yes")
+pct_VAinprogress <- t.test(main$Vadone == "In progress")
+pct_VAno <-  t.test(main$Vadone == "No")
+```
+
+```{r}
+
+cat_summary_VAdone <- tibble(`Conducted Vulnerability Assessment?` = 
+                              c("Yes",
+                                "In Progress",
+                                "No"),
+                            `Sample proportion` = 
+                              c(pct_VAdone$estimate * 100,
+                                pct_VAinprogress$estimate * 100,
+                                pct_VAno$estimate * 100),
+                            `95-percent confidence - low` = 
+                              c(pct_VAdone$estimate * 100,
+                                pct_VAinprogress$estimate * 100,
+                                pct_VAno$estimate * 100),
+                            `95-percent confidence - high` = 
+                              c(pct_VAdone$conf.int[2] * 100,
+                                pct_VAinprogress$conf.int[2] * 100,
+                                pct_VAno$conf.int[2] * 100))
+
+kable(cat_summary_VAdone, digits = 0)
+```
 
