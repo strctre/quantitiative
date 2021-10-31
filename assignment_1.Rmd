@@ -1,0 +1,70 @@
+---
+title: "SES 5215: Assignment 1"
+author: "Sai Joshi, Jialei Tang, Yuanzhao Wang "
+date: "2021/10/22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
+library(sf)
+library(knitr)
+```
+
+# Research Question
+
+Does the environnment sustainability status of a city impact the wellbeing of its citizens?
+
+# Citation articles
+
+C. Yin & C. Shao. Revisiting commuting, built environment and happiness: New evidence on a nonlinear relationship,
+*Transportation Research Part D: Transport and Environment* Volume 100 (2021) https://doi.org/10.1016/j.trd.2021.103043.
+
+Riffat, S., Powell, R. & Aydin, D. Future cities and environmental sustainability. *Fut Cit & Env 2, 1* (2016). https://doi.org/10.1186/s40984-016-0014-2
+
+# Sample population
+
+The cities of which data on wellbeing, emissions, energy mix, vulnerability assessment and water risks could be obtained.
+
+# Variables
+
+## Categorical Variables (2)
+
+* Energy Mix (Source of electricity) ( > 30% renewable energy)
+* Vulnerability Assessment (2017)
+* Water Risks
+
+## Continuous Variables (3)
+
+* Emissions (2020)
+* Wellbeing index (2020)
+* Population density
+
+
+# Number of observations (rows) in our data set
+
+```{r, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
+main <- st_read("combined_r.csv")
+total <- st_read("combinedmain_valuesonlyr.csv")
+```
+
+Number of Observations: 
+
+291 Observations (Rows/Cities)
+
+In our preliminary round of research, we identified 48 out of 292 cities that can provide us with data on the well-being index. There are some gaps in data for the other variables (namely emissions and water risks, which would bring the number of cities to 28) 
+
+We intend to collate further data to include in the event that the number of cities are insufficient for analysis.
+```{r, warning = FALSE, message = FALSE, echo = TRUE}
+kable(head(total))
+```
+```{r, warning = FALSE, message = FALSE, echo = TRUE}
+kable(head(main))
+```
+
+
+
+
