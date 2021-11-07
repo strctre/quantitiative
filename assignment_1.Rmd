@@ -118,7 +118,7 @@ wellbeing_hist <- ggplot(data) +
 
 ```{r display continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = FALSE}
 
-cont_summary <- tibble(`Variable` = c("Percentage of Renewable energy", 
+cont_summary <- tibble(`Variable` = c("Energy Mix", 
                "Population density (people per square kilometers)", 
                "Total Emissions (metric tonnes CO2e)",
                "WellBeing scores"),
@@ -246,5 +246,150 @@ cat_summary_VAdone <- tibble(`Conducted Vulnerability Assessment?` =
                                 pct_VAno$conf.int[2] * 100))
 
 kable(cat_summary_VAdone, digits = 0)
+```
+
+# Bivariate analysis
+## Correlations / regression on continuous variables
+Well-being is our key variable. The components of the well-being index are
+
+* Annual hours of sunshine hours
+* Access to green space
+* Crime
+* Traffic congstion
+* Happiness
+* Quality of healthcare
+* Work-life Balance
+* Governance 
+
+We recognize the limitations of this index and remain critical of its representation of the quality of life of citizens in the cities examined. Nevertheless, it is an interesting study and we are curious if the continuous and categorical variables we've identified can give the index more context as we establish its relationships to these variables.
+
+In this exercise, we would like to investigate the correlations between 
+
+* wellbeing and emissions
+* wellbeing and population density
+* wellbeing and energy-mix
+* population and emissions 
+* emissions and energy-mix
+
+## Correlation wellbeing and emissions
+
+The p-value is more than 0.05 at 0.3891, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ WellBeing + TotalEmissions, data = main)
+```
+
+```{r}
+wb_emissions_model <- lm(WellBeing ~ TotalEmissions, data = main)
+
+summary(wb_emissions_model)
+```
+
+```{r}
+ggplot(main) +
+  geom_point(aes(x = TotalEmissions, 
+                 y = WellBeing,
+                 size = TotalEmissions),
+             alpha = 0.25) +
+  theme_bw()
+```
+
+## Correlation wellbeing and population density
+
+The p-value is more than 0.05 at 0.3906, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ WellBeing + PopulationDensity, data = main)
+```
+
+```{r}
+wb_popdens_model <- lm(WellBeing ~ PopulationDensity, data = main)
+
+summary(wb_popdens_model)
+```
+
+## Correlation/Regression wellbeing and energy mix
+
+The p-value is less than 0.05 at 0.000009851, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is positive, which suggests that the relationship is direct.
+
+This result is interesting and it could be suggesting that cleaner cities provide better conditions for a higher wellbeing.
+
+```{r}
+cor.test(~ WellBeing + PercentageRenewable, data = main)
+```
+
+```{r}
+wb_energy_model <- lm(WellBeing ~ PercentageRenewable, data = data)
+
+summary(wb_energy_model)
+```
+
+
+```{r}
+ggplot(main) +
+  geom_point(aes(x = PercentageRenewable, 
+                 y = WellBeing),
+             alpha = 0.25) +
+  theme_bw()
+```
+## Correlation population density and emissions
+
+The p-value is more than 0.05 at 0.4849, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ PopulationDensity + TotalEmissions, data = main)
+```
+
+```{r}
+popdens_te_model <- lm(PopulationDensity ~ TotalEmissions, data = main)
+
+summary(popdens_te_model)
+```
+
+## Correlation emissions and energy mix
+
+The p-value is less than 0.05 at 0.0105, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is negative (it does not include zero), which suggests that the relationship is inverse.
+
+```{r}
+cor.test(~ TotalEmissions + PercentageRenewable, data = data)
+```
+
+```{r}
+te_energy_model <- lm(TotalEmissions ~ PercentageRenewable, data = main)
+
+summary(te_energy_model)
+```
+
+
+# Difference in means / regression on categorical variables
+
+## Difference in means on wellbeing and c40 status
+
+The p-value is more than 0.05 at 0.2037, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+
+```{r}
+t.test(WellBeing ~ C40_Status, main)
+```
+
+
+```{r}
+wb_c40_model <- lm(WellBeing ~ C40_Status, data = main)
+
+summary(wb_c40_model)
+
+```
+
+
+## Difference in means on wellbeing and status of vulnerability assessment (done or not)
+
+#```{r}
+t.test(WellBeing ~ Vadone, main)
+```
+The p-value is less than 0.05 at 0.03, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is negative (it does not include zero).
+
+It appears that there cities that have conducted vulnerability assessments are also cities whose citizens have a higher well being score. This could be due to the cities/governments which conduct vulnerability assessments are also more proactive in ensuring the wellbeing of their citizens.
+
+```{r}
+wb_va_model <- lm(WellBeing ~ Vadone, data = main)
+
+summary(wb_va_model)
+
 ```
 
