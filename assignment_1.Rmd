@@ -16,7 +16,7 @@ library(knitr)
 library(readxl)
 library(gridExtra)
 ```
-
+# Assignment 1 & 2
 # Research Question
 
 Does the environnment sustainability status of a city impact the wellbeing of its citizens?
@@ -122,7 +122,7 @@ wellbeing_hist <- ggplot(data) +
 cont_summary <- tibble(`Variable` = c("Percentage of Energy Use from Renewable Sources", 
                "Population density (people per square kilometers)", 
                "Total Emissions (metric tonnes CO2e)",
-               "WellBeing scores"),
+               "Well-being scores"),
 
 `Sample mean` = c(energy_t_test$estimate,
                     dens_t_test$estimate,
@@ -159,7 +159,7 @@ kable(cont_summary, digits = 0)
 
 pretty_energy_hist <- energy_hist +
   theme_bw() +
-  scale_x_continuous(name = "Percentage of Energy Use from Renewable Sources") +
+  scale_x_continuous(name = "Percentage of Energy Use\nfrom Renewable Sources") +
   scale_y_continuous(name = "Number of cities") +
   theme(axis.text.x = element_text(angle = 90))
 
@@ -174,21 +174,20 @@ pretty_dens_hist <- dens_hist +
 
 pretty_emission_hist = emission_hist +
   theme_bw() +
-  scale_x_continuous(name = "Total Emissions (log(Metric Tonnes CO2e)") +
+  scale_x_continuous(name = "Total Emissions (log(Metric Tonnes CO2e))") +
   scale_y_continuous(name = "Number of cities") +
   theme(axis.text.x = element_text(angle = 90)) 
 
 pretty_wellbeing_hist = wellbeing_hist +
   theme_bw() +
-  scale_x_continuous(name = "WellBeing scores",
-                     breaks = seq(0, 0.3, by=.05),
-                     labels = seq(0, 300, by = 50)) +
+  scale_x_continuous(name = "Well-being scores") +
   scale_y_continuous(name = "Number of cities") +
   theme(axis.text.x = element_text(angle = 90))
 
 grid.arrange(pretty_energy_hist, pretty_dens_hist, pretty_emission_hist, pretty_wellbeing_hist,
              ncol = 2, nrow = 2)
 ```
+
 # Sample Proportion for each Category
 
 ## Our categorical variables are:
@@ -217,6 +216,7 @@ cat_summary_C40 <- tibble(`C40 Cities` =
 
 kable(cat_summary_C40, digits = 0)
 ```
+
 # The 95-percent confidence interval for the population proportion in each category
 
 ```{r}
@@ -247,6 +247,7 @@ cat_summary_VAdone <- tibble(`Conducted Vulnerability Assessment?` =
 kable(cat_summary_VAdone, digits = 0)
 ```
 
+# Assignment 3
 # Bivariate analysis
 ## Correlations / regression on continuous variables
 Well-being is our key variable. The components of the well-being index are
@@ -254,7 +255,7 @@ Well-being is our key variable. The components of the well-being index are
 * Annual hours of sunshine hours
 * Access to green space
 * Crime
-* Traffic congstion
+* Traffic congestion
 * Happiness
 * Quality of healthcare
 * Work-life Balance
@@ -283,14 +284,16 @@ wb_emissions_model <- lm(WellBeing ~ TotalEmissions, data = main)
 summary(wb_emissions_model)
 ```
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = TRUE}
 ggplot(main) +
   geom_point(aes(x = TotalEmissions, 
                  y = WellBeing,
                  size = TotalEmissions),
              alpha = 0.25) +
+  labs(y="Well-being Score", x = "Total Emissions (Metric Tonnes CO2e)", size = "Total Emissions\n(Metric Tonnes CO2e)") +
   theme_bw()
 ```
+
 
 ## Correlation wellbeing and population density
 
@@ -322,14 +325,15 @@ summary(wb_energy_model)
 ```
 
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = TRUE}
 ggplot(main) +
   geom_point(aes(x = PercentRenew, 
                  y = WellBeing),
              alpha = 0.25) +
-  labs(y="Well-being Score", x = "Percentage of Energy Use from Renewable Sources")
+  labs(y="Well-being Score", x = "Percentage of Energy Use from Renewable Sources") +
   theme_bw()
 ```
+
 ## Correlation population density and emissions
 
 The p-value is more than 0.05 at 0.4849, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
