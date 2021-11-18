@@ -2,7 +2,8 @@
 title: "SES 5215 | Analytic Methods of Urban Planning: Quantitative"
 author: "Sai Joshi, Jialei Tang, Yuanzhao Wang "
 date: "2021/10/22"
-output: html_document
+output: 
+  rmdformats::downcute
 ---
 
 ```{r setup, include=FALSE}
@@ -71,7 +72,7 @@ kable(head(main))
 ## Our continuous variables are:
 
 * Emissions 
-* Wellbeing index 
+* Well-being index 
 * Population density
 * Energy Mix (Source of electricity) 
 
@@ -265,13 +266,13 @@ We recognize the limitations of this index and remain critical of its representa
 
 In this exercise, we would like to investigate the correlations between 
 
-* wellbeing and emissions
-* wellbeing and population density
-* wellbeing and energy-mix
+* well-being and emissions
+* well-being and population density
+* well-being and energy-mix
 * population and emissions 
 * emissions and energy-mix
 
-## Correlation wellbeing and emissions
+## Well-being and emissions
 
 The p-value is more than 0.05 at 0.3891, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
 ```{r}
@@ -295,7 +296,7 @@ ggplot(main) +
 ```
 
 
-## Correlation wellbeing and population density
+## Well-being and population density
 
 The p-value is more than 0.05 at 0.3906, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
 ```{r}
@@ -308,7 +309,7 @@ wb_popdens_model <- lm(WellBeing ~ PopulationDensity, data = main)
 summary(wb_popdens_model)
 ```
 
-## Correlation/Regression wellbeing and energy mix
+## Well-being and energy mix
 
 The p-value is less than 0.05 at 0.000009851, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is positive, which suggests that the relationship is direct.
 
@@ -334,7 +335,7 @@ ggplot(main) +
   theme_bw()
 ```
 
-## Correlation population density and emissions
+## Population density and emissions
 
 The p-value is more than 0.05 at 0.4849, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
 ```{r}
@@ -347,7 +348,7 @@ popdens_te_model <- lm(PopulationDensity ~ TotalEmissions, data = main)
 summary(popdens_te_model)
 ```
 
-## Correlation emissions and energy mix
+## Emissions and energy mix
 
 The p-value is less than 0.05 at 0.0105, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is negative (it does not include zero), which suggests that the relationship is inverse.
 
@@ -364,7 +365,7 @@ summary(te_energy_model)
 
 # Difference in means / regression on categorical variables
 
-## Difference in means on wellbeing and c40 status
+## Well-being and c40 status
 
 The p-value is more than 0.05 at 0.2037, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
 
@@ -381,7 +382,7 @@ summary(wb_c40_model)
 ```
 
 
-## Difference in means on wellbeing and status of vulnerability assessment (done or not)
+## Well-being and status of vulnerability assessment
 
 The p-value is less than 0.05 at 0.03 for the regression test, which means the relationship is significant. 
 In order to run the t-test, a new column defined by whether Vulnerability Assessment was commenced was created, in which all "In progress" cities were changed to "Yes". Here, the p-value is 0.05957, which is greater than 0.05. It suggest that the relationship is not that significant between whether a city has commenced vulnerability assessment and its wellbeing. The 95 percent confidence interval also includes positive and negative values, which cannot point to the nature of the relationship (direct or inverse). 
@@ -400,4 +401,21 @@ wb_va_model <- lm(WellBeing ~ Vadone, data = main)
 summary(wb_va_model)
 
 ```
+
+# Assignment 4
+# Multivariate Regression
+
+```{r}
+full_model <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew + PopulationDensity + TotalEmissions, main)
+
+summary(full_model)
+```
+
+In our bivariate regression, we derived the equation W = 5.932512 + 0.014506(PR), where W is the well-being score and PR is the percentage of energy use from renewable sources. This means that for percentage of energy use from renewable sources was associated with an increase of about 0.0014506 in the well-being score. When we control for c40 status, vulnerability assessment status, population density and total emissions, we find that relationship is weaker, although still significant with a p-value of 0.00011 compared to 0.000009851 in the bivariate regression. The relation is still positive, coherent with the 95% confidence interval. Ceteris paribus, each 1 percent increase in the percentage of energy use from renewable sources is associated with about 1.450e-02 increase in the well-being score. 
+
+On the other hand, our bivariate regression (linear model) on well-being scores and completion of vulnerability assessment showed that the p-value is 0.03, which suggests that the two have a significant relationship.
+Once we’ve controlled for our other variables, we find that relationship is actually weaker, in which the p-value is 0.26269 for cities that have completed vulnerability assessments. In this model, completion of vulnerability assessment appears to be associated to a decrease in well-being scores of -2.819e-01 (which is approximately -0.80529) but this relationship is insignificant given its high p-value.
+
+
+The only significant relationship observed in the multivariate model is between the well-being score and the percentage of energy use from renewable sources. Apart from the well-being scores and completion of vulnerability assessment, relationships between well-being scores and other independent variables, namely C40 Status, population density and total emissions, cohere with our results from the earlier bivariate regression as insignificant.
 
