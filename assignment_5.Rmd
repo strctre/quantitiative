@@ -1,0 +1,525 @@
+---
+title: "SES 5215 | Analytic Methods of Urban Planning: Quantitative"
+author: "Sai Joshi, Jialei Tang, Yuanzhao Wang "
+date: "2021/10/22"
+output: 
+  rmdformats::downcute
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+library(tidyverse)
+library(sf)
+library(knitr)
+library(readxl)
+library(gridExtra)
+```
+# Assignment 1 & 2
+# Research Question
+
+Does the environnment sustainability status of a city impact the wellbeing of its citizens?
+
+# Citation articles
+
+C. Yin & C. Shao. Revisiting commuting, built environment and happiness: New evidence on a nonlinear relationship,
+*Transportation Research Part D: Transport and Environment* Volume 100 (2021) https://doi.org/10.1016/j.trd.2021.103043.
+
+Riffat, S., Powell, R. & Aydin, D. Future cities and environmental sustainability. *Fut Cit & Env 2, 1* (2016). https://doi.org/10.1186/s40984-016-0014-2
+
+# Sample population
+
+The cities of which data on wellbeing, emissions, energy mix, vulnerability assessment and  could be obtained.
+
+# Variables
+
+## Categorical Variables (2)
+
+* Vulnerability Assessment 
+* C40 Status
+
+## Continuous Variables (4)
+
+* Emissions
+* Wellbeing index 
+* Population density
+* Percentage of Energy Use from Renewable Sources
+
+# Number of observations (rows) in our data set
+
+```{r, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+main <- st_read("values_variablesonly.xlsx")
+total <- st_read("combinedmain_valuesonlyr.csv")
+```
+
+Number of Observations: 
+
+291 Observations (Rows/Cities)
+
+In our preliminary round of research, we identified 45 out of 292 cities that can provide us with data on the well-being index. There are 9 cities which did not have total carbon emissions reported. We accounted for the gaps by gathering the emissions numbers for the cities that did not have that data in the first data set. 
+
+We intend to collate further data to include in the event that the number of cities are insufficient for analysis.
+```{r, warning = FALSE, message = FALSE, echo = TRUE}
+kable(head(total))
+```
+```{r, warning = FALSE, message = FALSE, echo = TRUE}
+kable(head(main))
+```
+# Reading our data
+
+## Our continuous variables are:
+
+* Emissions 
+* Well-being index 
+* Population density
+* Energy Mix (Source of electricity) 
+
+```{r read xlsx, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+data <- read_xlsx(path = "values_variablesonly.xlsx", 
+                      sheet = "Sheet1") %>%
+  mutate(log_emissions = log(TotalEmissions))
+energy_t_test <- t.test(data$PercentRenew)
+dens_t_test <- t.test(data$PopulationDensity)
+emission_t_test <- t.test(data$TotalEmissions)
+wellbeing_t_test <- t.test(data$WellBeing)
+```                  
+
+
+```{r calculate continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+
+energy_quartiles <- quantile(data$PercentRenew, na.rm = TRUE)
+dens_quartiles <- quantile(data$PopulationDensity, na.rm = TRUE)
+emission_quartiles <- quantile(data$TotalEmissions, na.rm = TRUE)
+wellbeing_quartiles <- quantile(data$WellBeing, na.rm = TRUE)
+
+energy_dev <- sd(data$PercentRenew, na.rm = TRUE)
+dens_dev <- sd(data$PopulationDensity, na.rm = TRUE)
+emission_dev <- sd(data$TotalEmissions, na.rm = TRUE)
+wellbeing_dev <- sd(data$WellBeing, na.rm = TRUE)
+
+energy_hist <- ggplot(data) +
+  geom_histogram(aes(x = PercentRenew),
+                 bins = 30)
+
+dens_hist <- ggplot(data) +
+  geom_histogram(aes(x = PopulationDensity),
+                 bins = 30) +
+  scale_x_continuous(trans = "log")
+
+emission_hist <- ggplot(data) +
+  geom_histogram(aes(x = log_emissions),
+                 bins = 30)
+
+wellbeing_hist <- ggplot(data) +
+  geom_histogram(aes(x = WellBeing),
+                 bins = 30)
+```
+
+
+```{r display continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+
+cont_summary <- tibble(`Variable` = c("Percentage of Energy Use from Renewable Sources", 
+               "Population density (people per square kilometers)", 
+               "Total Emissions (metric tonnes CO2e)",
+               "Well-being scores"),
+
+`Sample mean` = c(energy_t_test$estimate,
+                    dens_t_test$estimate,
+                    emission_t_test$estimate,
+                    wellbeing_t_test$estimate* 1000),
+
+`Population mean (95% confidence) - low` = 
+    c(energy_t_test$conf.int[1],
+      dens_t_test$conf.int[1],
+      emission_t_test$conf.int[1],
+      wellbeing_t_test$conf.int[1]* 1000),
+`Population mean (95% confidence) - high` =
+    c(energy_t_test$conf.int[2],
+      dens_t_test$conf.int[2],
+      emission_t_test$conf.int[2],
+      wellbeing_t_test$conf.int[2] * 1000),
+`Median` = c(energy_quartiles[3],
+             dens_quartiles[3],
+             emission_quartiles[3],
+             wellbeing_quartiles[3] * 1000),
+`Interquartile range` = c(energy_quartiles[4] - energy_quartiles[2],
+                            dens_quartiles[4] - dens_quartiles[2],
+                            emission_quartiles[4] - emission_quartiles[2],
+                            wellbeing_quartiles[4] - wellbeing_quartiles[2]* 1000),
+`Standard deviation` = c(energy_dev,
+                          dens_dev,
+                          emission_dev,
+                          wellbeing_dev* 1000))
+
+kable(cont_summary, digits = 0)
+```
+
+```{r display histograms, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+
+pretty_energy_hist <- energy_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Percentage of Energy Use\nfrom Renewable Sources") +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+pretty_dens_hist <- dens_hist +
+  theme_bw() + 
+  scale_x_continuous(name = "Population density\n(residents per square kilometer)",
+                     trans = "log",
+                     breaks = c(0.1, 1, 10, 100, 1000, 10000),
+                     labels = c("0.1", "1", "10", "100", "1000", "10,000")) +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+pretty_emission_hist = emission_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Total Emissions (log(Metric Tonnes CO2e))") +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90)) 
+
+pretty_wellbeing_hist = wellbeing_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Well-being scores") +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+grid.arrange(pretty_energy_hist, pretty_dens_hist, pretty_emission_hist, pretty_wellbeing_hist,
+             ncol = 2, nrow = 2)
+```
+
+# Sample Proportion for each Category
+
+## Our categorical variables are:
+
+* Vulnerability Assessment
+* C40 Status
+
+```{r}
+pct_C40 <- t.test(main$C40_Status == "C40")
+pct_nonC40 <- t.test(main$C40_Status == "No")
+```
+
+```{r}
+cat_summary_C40 <- tibble(`C40 Cities` = 
+                              c("C40",
+                                "Non C40"),
+                            `Sample proportion` = 
+                              c(pct_C40$estimate * 100,
+                                pct_nonC40$estimate *100),
+                            `95-percent confidence - low` = 
+                              c(pct_C40$conf.int[1] * 100,
+                                pct_nonC40$conf.int[1] * 100),
+                            `95-percent confidence - high` = 
+                              c(pct_C40$conf.int[2] * 100,
+                                pct_nonC40$conf.int[2] * 100))
+
+kable(cat_summary_C40, digits = 0)
+```
+
+# The 95-percent confidence interval for the population proportion in each category
+
+```{r}
+pct_VAdone <- t.test(main$Vadone == "Yes")
+pct_VAinprogress <- t.test(main$Vadone == "In progress")
+pct_VAno <-  t.test(main$Vadone == "No")
+```
+
+```{r}
+
+cat_summary_VAdone <- tibble(`Conducted Vulnerability Assessment?` = 
+                              c("Yes",
+                                "In Progress",
+                                "No"),
+                            `Sample proportion` = 
+                              c(pct_VAdone$estimate * 100,
+                                pct_VAinprogress$estimate * 100,
+                                pct_VAno$estimate * 100),
+                            `95-percent confidence - low` = 
+                              c(pct_VAdone$estimate * 100,
+                                pct_VAinprogress$estimate * 100,
+                                pct_VAno$estimate * 100),
+                            `95-percent confidence - high` = 
+                              c(pct_VAdone$conf.int[2] * 100,
+                                pct_VAinprogress$conf.int[2] * 100,
+                                pct_VAno$conf.int[2] * 100))
+
+kable(cat_summary_VAdone, digits = 0)
+```
+
+# Assignment 3
+# Bivariate analysis
+## Correlations / regression on continuous variables
+Well-being is our key variable. The components of the well-being index are
+
+* Annual hours of sunshine hours
+* Access to green space
+* Crime
+* Traffic congestion
+* Happiness
+* Quality of healthcare
+* Work-life Balance
+* Governance 
+
+We recognize the limitations of this index and remain critical of its representation of the quality of life of citizens in the cities examined. Nevertheless, it is an interesting study and we are curious if the continuous and categorical variables we've identified can give the index more context as we establish its relationships to these variables.
+
+In this exercise, we would like to investigate the correlations between 
+
+* well-being and emissions
+* well-being and population density
+* well-being and energy-mix
+* population and emissions 
+* emissions and energy-mix
+
+## Well-being and emissions
+
+The p-value is more than 0.05 at 0.3891, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ WellBeing + TotalEmissions, data = main)
+```
+
+```{r}
+wb_emissions_model <- lm(WellBeing ~ TotalEmissions, data = main)
+
+summary(wb_emissions_model)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = TRUE}
+ggplot(main) +
+  geom_point(aes(x = TotalEmissions, 
+                 y = WellBeing,
+                 size = TotalEmissions),
+             alpha = 0.25) +
+  labs(y="Well-being Score", x = "Total Emissions (Metric Tonnes CO2e)", size = "Total Emissions\n(Metric Tonnes CO2e)") +
+  theme_bw()
+```
+
+
+## Well-being and population density
+
+The p-value is more than 0.05 at 0.3906, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ WellBeing + PopulationDensity, data = main)
+```
+
+```{r}
+wb_popdens_model <- lm(WellBeing ~ PopulationDensity, data = main)
+
+summary(wb_popdens_model)
+```
+
+## Well-being and energy mix
+
+The p-value is less than 0.05 at 0.000009851, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is positive, which suggests that the relationship is direct.
+
+This result is interesting and it could be suggesting that cleaner cities provide better conditions for a higher wellbeing.
+
+```{r}
+cor.test(~ WellBeing + PercentRenew, data = main)
+```
+
+```{r}
+wb_energy_model <- lm(WellBeing ~ PercentRenew, data = main)
+
+summary(wb_energy_model)
+```
+
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = TRUE}
+ggplot(main) +
+  geom_point(aes(x = PercentRenew, 
+                 y = WellBeing),
+             alpha = 0.25) +
+  labs(y="Well-being Score", x = "Percentage of Energy Use from Renewable Sources") +
+  theme_bw()
+```
+
+## Population density and emissions
+
+The p-value is more than 0.05 at 0.4849, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ PopulationDensity + TotalEmissions, data = main)
+```
+
+```{r}
+popdens_te_model <- lm(PopulationDensity ~ TotalEmissions, data = main)
+
+summary(popdens_te_model)
+```
+
+## Emissions and energy mix
+
+The p-value is less than 0.05 at 0.0105, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is negative (it does not include zero), which suggests that the relationship is inverse.
+
+```{r}
+cor.test(~ TotalEmissions + PercentageRenewable, data = data)
+```
+
+```{r}
+te_energy_model <- lm(TotalEmissions ~ PercentageRenewable, data = main)
+
+summary(te_energy_model)
+```
+
+
+# Difference in means / regression on categorical variables
+
+## Well-being and c40 status
+
+The p-value is more than 0.05 at 0.2037, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+
+```{r}
+t.test(WellBeing ~ C40_Status, main)
+```
+
+
+```{r}
+wb_c40_model <- lm(WellBeing ~ C40_Status, data = main)
+
+summary(wb_c40_model)
+
+```
+
+
+## Well-being and status of vulnerability assessment
+
+The p-value is less than 0.05 at 0.03 for the regression test, which means the relationship is significant. 
+In order to run the t-test, a new column defined by whether Vulnerability Assessment was commenced was created, in which all "In progress" cities were changed to "Yes". Here, the p-value is 0.05957, which is greater than 0.05. It suggest that the relationship is not that significant between whether a city has commenced vulnerability assessment and its wellbeing. The 95 percent confidence interval also includes positive and negative values, which cannot point to the nature of the relationship (direct or inverse). 
+This turns us to focus on the regression test of wellbeing and status of vulnerability assessment of cities (Yes, No, In progress), which is informs us that completion of the vulnerability assessment has a more significant relationship to wellbeing.
+
+In this light, it appears that cities that have conducted vulnerability assessments are also cities whose citizens have a higher well being score. This could be due to the cities/governments which conduct vulnerability assessments are also more proactive in ensuring the well-being of their citizens.
+
+```{r}
+t.test(WellBeing ~ Vacommenced, data = main)
+```
+
+
+```{r}
+wb_va_model <- lm(WellBeing ~ Vadone, data = main)
+
+summary(wb_va_model)
+
+```
+
+# Assignment 4
+# Multivariate Regression
+
+```{r}
+full_model <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew + PopulationDensity + TotalEmissions, main)
+
+summary(full_model)
+```
+
+In our bivariate regression, we derived the equation W = 5.932512 + 0.014506(PR), where W is the well-being score and PR is the percentage of energy use from renewable sources. This means that for percentage of energy use from renewable sources was associated with an increase of about 0.0014506 in the well-being score. When we control for c40 status, vulnerability assessment status, population density and total emissions, we find that relationship is weaker, although still significant with a p-value of 0.00011 compared to 0.000009851 in the bivariate regression. The relation is still positive, coherent with the 95% confidence interval. Ceteris paribus, each 1 percent increase in the percentage of energy use from renewable sources is associated with about 1.450e-02 increase in the well-being score. 
+
+On the other hand, our bivariate regression (linear model) on well-being scores and completion of vulnerability assessment showed that the p-value is 0.03, which suggests that the two have a significant relationship.
+Once we’ve controlled for our other variables, we find that relationship is actually weaker, in which the p-value is 0.26269 for cities that have completed vulnerability assessments. In this model, completion of vulnerability assessment appears to be associated to a decrease in well-being scores of -2.819e-01 (which is approximately -0.80529) but this relationship is insignificant given its high p-value.
+
+
+The only significant relationship observed in the multivariate model is between the well-being score and the percentage of energy use from renewable sources. Apart from the well-being scores and completion of vulnerability assessment, relationships between well-being scores and other independent variables, namely C40 Status, population density and total emissions, cohere with our results from the earlier bivariate regression as insignificant.
+
+# Assignment 5
+# Transformations
+
+## Linear Transformations
+
+### Mean Centering 
+
+```{r}
+centered_data <- main %>%
+  mutate(pop_dens = pop_dens - mean(pop_dens, na.rm=TRUE),
+         med_age_E = med_age_E - mean(med_age_E, na.rm=TRUE))
+
+
+centered_model <- lm(covid_rate ~ med_age_E + pop_dens + majority_vote + type, centered_data)
+
+export_summs(full_model, centered_model, 
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("Initial", "Centered"))
+```
+
+```{r}
+coeff_names <- c("Constant" = "(Intercept)",
+                 "Median age (years)" = "med_age_E",
+                 "Population density (people per square mile)" = "pop_dens",
+                 "Republican majority in 2020" = "majority_voteRepublican",
+                 "Large fringe metro" = "typeLarge fringe metro",
+                 "Medium metro" = "typeMedium metro",
+                 "Small metro" = "typeSmall metro",
+                 "Micropolitan" = "typeMicropolitan",
+                 "Rural" = "typeNon-core")
+
+export_summs(full_model, centered_model, 
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("Initial", "Centered"),
+             coefs = coeff_names)
+```
+
+### Scaling
+
+```{r}
+centered_data_scaled <- centered_data %>%
+  mutate(covid_rate = covid_rate * 1000,
+         med_age_10 = med_age_E / 10,
+         pop_dens_100 = pop_dens / 100)
+
+coeff_names_scaled <- c("Constant" = "(Intercept)",
+                 "Median age (years)" = "med_age_E",
+                 "Median age (decades)" = "med_age_10",
+                 "Population density (people per square mile)" = "pop_dens",
+                 "Population density (100 people per square mile)" = "pop_dens_100",
+                 "Republican majority in 2020" = "majority_voteRepublican",
+                 "Large fringe metro" = "typeLarge fringe metro",
+                 "Medium metro" = "typeMedium metro",
+                 "Small metro" = "typeSmall metro",
+                 "Micropolitan" = "typeMicropolitan",
+                 "Rural" = "typeNon-core")
+                   
+                   
+centered_model_scaled <- lm(covid_rate ~ med_age_10 + pop_dens_100 + majority_vote + type, centered_data_scaled)
+
+export_summs(full_model, centered_model, centered_model_scaled,
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("Initial\n(cases per capita)", 
+                             "Centered\n(cases per capita)", 
+                             "Centered\n(cases per 1,000 residents)"),
+             coefs = coeff_names_scaled)
+```
+
+
+## Non-Linear transformations
+
+```{r}
+centered_data_scaled_log <- centered_data_scaled %>%
+  mutate(log2_pop_dens = log(pop_dens + mean(my_data$pop_dens, na.rm = TRUE), base = 2))
+
+coeff_names_scaled <- c("Constant" = "(Intercept)",
+                 "Median age (years)" = "med_age_E",
+                 "Median age (decades)" = "med_age_10",
+                 "Population density (people per square mile)" = "pop_dens",
+                 "Population density (100 people per square mile)" = "pop_dens_100",
+                 "Doubling population density" = "log2_pop_dens",
+                 "Republican majority in 2020" = "majority_voteRepublican",
+                 "Large fringe metro" = "typeLarge fringe metro",
+                 "Medium metro" = "typeMedium metro",
+                 "Small metro" = "typeSmall metro",
+                 "Micropolitan" = "typeMicropolitan",
+                 "Rural" = "typeNon-core")
+                   
+                   
+centered_model_scaled_log <- lm(covid_rate ~ med_age_10 + log2_pop_dens + majority_vote + type, centered_data_scaled_log)
+
+export_summs(full_model, centered_model, centered_model_scaled, centered_model_scaled_log,
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("Initial\n(cases per capita)", 
+                             "Centered\n(cases per capita)",
+                             "Centered\n(cases per 1,000 residents)",
+                             "Centered, logged\n(cases per 1,000 residents)"),
+             coefs = coeff_names_scaled)
+```
+
