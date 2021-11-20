@@ -498,33 +498,20 @@ export_summs(full_model, centered_model, centered_model_scaled,
 
 ## Non-Linear transformations
 
+
 ```{r}
-centered_data_scaled_log <- centered_data_scaled %>%
-  mutate(log2_pop_dens = log(pop_dens + mean(my_data$pop_dens, na.rm = TRUE), base = 2))
+centered_data_log <- centered_data %>%
+  mutate(log_Emission = log(TotalEmissions_centered), base = 2)
 
-coeff_names_scaled <- c("Constant" = "(Intercept)",
-                 "Median age (years)" = "med_age_E",
-                 "Median age (decades)" = "med_age_10",
-                 "Population density (people per square mile)" = "pop_dens",
-                 "Population density (100 people per square mile)" = "pop_dens_100",
-                 "Doubling population density" = "log2_pop_dens",
-                 "Republican majority in 2020" = "majority_voteRepublican",
-                 "Large fringe metro" = "typeLarge fringe metro",
-                 "Medium metro" = "typeMedium metro",
-                 "Small metro" = "typeSmall metro",
-                 "Micropolitan" = "typeMicropolitan",
-                 "Rural" = "typeNon-core")
                    
-                   
-centered_model_scaled_log <- lm(covid_rate ~ med_age_10 + log2_pop_dens + majority_vote + type, centered_data_scaled_log)
+centered_model_log <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew_centered + pop_dens_centered + log_Emission, centered_data_log)
 
-export_summs(full_model, centered_model, centered_model_scaled, centered_model_scaled_log,
+export_summs(full_model, centered_model, centered_model_log,
              error_format = "(p = {p.value})",
              error_pos = "same",
              model.names = c("Initial\n(cases per capita)", 
                              "Centered\n(cases per capita)",
-                             "Centered\n(cases per 1,000 residents)",
-                             "Centered, logged\n(cases per 1,000 residents)"),
-             coefs = coeff_names_scaled)
+                             "Centered, logged\n(cases per capita)"))
 ```
+
 
