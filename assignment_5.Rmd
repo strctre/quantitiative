@@ -12,10 +12,13 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
 
 ```{r, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
 library(tidyverse)
-library(sf)
-library(knitr)
+library(tidycensus)
 library(readxl)
+library(knitr)
+library(tigris)
+library(sf)
 library(gridExtra)
+library(jtools)
 ```
 # Assignment 1 & 2
 # Research Question
@@ -428,11 +431,12 @@ The only significant relationship observed in the multivariate model is between 
 
 ```{r}
 centered_data <- main %>%
-  mutate(pop_dens = pop_dens - mean(pop_dens, na.rm=TRUE),
-         med_age_E = med_age_E - mean(med_age_E, na.rm=TRUE))
+  mutate(pop_dens_centered = PopulationDensity - mean(PopulationDensity, na.rm=TRUE),
+         TotalEmissions_centered = TotalEmissions - mean(TotalEmissions, na.rm=TRUE),
+         PercentRenew_centered = PercentRenew - mean(PercentRenew, na.rm=TRUE))
 
 
-centered_model <- lm(covid_rate ~ med_age_E + pop_dens + majority_vote + type, centered_data)
+centered_model <- lm(WellBeing ~ C40_Status + Vadone + pop_dens_centered + TotalEmissions_centered + PercentRenew_centered, centered_data)
 
 export_summs(full_model, centered_model, 
              error_format = "(p = {p.value})",
@@ -442,14 +446,15 @@ export_summs(full_model, centered_model,
 
 ```{r}
 coeff_names <- c("Constant" = "(Intercept)",
-                 "Median age (years)" = "med_age_E",
-                 "Population density (people per square mile)" = "pop_dens",
-                 "Republican majority in 2020" = "majority_voteRepublican",
-                 "Large fringe metro" = "typeLarge fringe metro",
-                 "Medium metro" = "typeMedium metro",
-                 "Small metro" = "typeSmall metro",
-                 "Micropolitan" = "typeMicropolitan",
-                 "Rural" = "typeNon-core")
+                 "Non-C40 City" = "C40_StatusNo",
+                 "No vulnerability assessment done" = "VadoneNo",
+                 "Conducted vulnerability assessment " = "VadoneYes",
+                 "Percentage of Energy Use from Renewable Sources %" = "PercentRenew",
+                 "Population Density (per sq km)" = "PopulationDensity", 
+                 "Total Emissions  (metric tonnes CO2e)" = "TotalEmissions",
+                 "Population Density (per sq km) Centered" = "pop_dens_centered",
+                 "Total Emissions (metric tonnes CO2e) centered" = "TotalEmissions_centered",
+                 "Percentage of Energy Use from Renewable Sources % Centered" = "PercentRenew_centered")
 
 export_summs(full_model, centered_model, 
              error_format = "(p = {p.value})",
