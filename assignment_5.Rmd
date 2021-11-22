@@ -72,7 +72,7 @@ kable(head(main))
 ```
 # Reading our data
 
-## Our continuous variables are:
+## Continuous variables:
 
 * Emissions 
 * Well-being index 
@@ -194,7 +194,7 @@ grid.arrange(pretty_energy_hist, pretty_dens_hist, pretty_emission_hist, pretty_
 
 # Sample Proportion for each Category
 
-## Our categorical variables are:
+## Categorical variables:
 
 * Vulnerability Assessment
 * C40 Status
@@ -429,6 +429,13 @@ The only significant relationship observed in the multivariate model is between 
 
 ### Mean Centering 
 
+In the earlier multivariate regression, the intercept predicted the well-being score for a C40 city while assuming zero values for emissions, population density, percentage of energy use from renewable sources, and a null value for vulberability assessment status. This value is unrealistic. Through mean centering, we are able to predict a well-being score for a C40 city that assumes the average value of the other independent variables. 
+
+A city that uses  less-than-average percentage energy from renewable sources would have a negative value and a city that uses more-than-average percentage energy from renewable sources would have a positive value. The same holds for population density.
+
+The regression coefficents remain the same, but the intercept increased from 6.10 to 6.75. It refers to a C40 city average in terms of average percentage energy from renewable sources, population density, and total emissions. 
+
+The R-Value does not change and remains at 0.45 in this linear transformation.
 ```{r}
 centered_data <- main %>%
   mutate(pop_dens_centered = PopulationDensity - mean(PopulationDensity, na.rm=TRUE),
@@ -438,13 +445,6 @@ centered_data <- main %>%
 
 centered_model <- lm(WellBeing ~ C40_Status + Vadone + pop_dens_centered + TotalEmissions_centered + PercentRenew_centered, centered_data)
 
-export_summs(full_model, centered_model, 
-             error_format = "(p = {p.value})",
-             error_pos = "same",
-             model.names = c("Initial", "Centered"))
-```
-
-```{r}
 coeff_names <- c("Constant" = "(Intercept)",
                  "Non-C40 City" = "C40_StatusNo",
                  "No vulnerability assessment done" = "VadoneNo",
@@ -463,55 +463,40 @@ export_summs(full_model, centered_model,
              coefs = coeff_names)
 ```
 
-### Scaling
-
-```{r}
-centered_data_scaled <- centered_data %>%
-  mutate(covid_rate = covid_rate * 1000,
-         med_age_10 = med_age_E / 10,
-         pop_dens_100 = pop_dens / 100)
-
-coeff_names_scaled <- c("Constant" = "(Intercept)",
-                 "Median age (years)" = "med_age_E",
-                 "Median age (decades)" = "med_age_10",
-                 "Population density (people per square mile)" = "pop_dens",
-                 "Population density (100 people per square mile)" = "pop_dens_100",
-                 "Republican majority in 2020" = "majority_voteRepublican",
-                 "Large fringe metro" = "typeLarge fringe metro",
-                 "Medium metro" = "typeMedium metro",
-                 "Small metro" = "typeSmall metro",
-                 "Micropolitan" = "typeMicropolitan",
-                 "Rural" = "typeNon-core")
-                   
-                   
-centered_model_scaled <- lm(covid_rate ~ med_age_10 + pop_dens_100 + majority_vote + type, centered_data_scaled)
-
-export_summs(full_model, centered_model, centered_model_scaled,
-             error_format = "(p = {p.value})",
-             error_pos = "same",
-             model.names = c("Initial\n(cases per capita)", 
-                             "Centered\n(cases per capita)", 
-                             "Centered\n(cases per 1,000 residents)"),
-             coefs = coeff_names_scaled)
-```
-
-
 ## Non-Linear transformations
 
+### Logarithmic Transformation
+
+In the preliminary examination of our dataset (see histograms in "Reading our data" section), we conducted a logarithmic transform for total emissions to visualize it in the histogram to see a better distribution.  We did not use the logged values in subsequent analysis. Here, we apply a logarithmic transformation in the multivariate regression. We used a base of 2 for the log, the interpretation of that coefficient will be the effect of doubling total emissions. 
 
 ```{r}
-centered_data_log <- centered_data %>%
-  mutate(log_Emission = log(TotalEmissions_centered), base = 2)
+data_log <- centered_data %>%
+  mutate(log_Emission = log(TotalEmissions), base = 2)
 
                    
-centered_model_log <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew_centered + pop_dens_centered + log_Emission, centered_data_log)
+centered_model_log <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew_centered + pop_dens_centered + log_Emission, data_log)
+
+coeff_names <- c("Constant" = "(Intercept)",
+                 "Non-C40 City" = "C40_StatusNo",
+                 "No vulnerability assessment done" = "VadoneNo",
+                 "Conducted vulnerability assessment " = "VadoneYes",
+                 "Percentage of Energy Use\nfrom Renewable Sources %" = "PercentRenew",
+                 "Population Density (per sq km)" = "PopulationDensity", 
+                 "Total Emissions\n(metric tonnes CO2e)" = "TotalEmissions",
+                 "Population Density\n(per sq km) Centered" = "pop_dens_centered",
+                 "Total Emissions\n(metric tonnes CO2e) centered" = "TotalEmissions_centered",
+                 "Percentage of Energy Use\nfrom Renewable Sources % Centered" = "PercentRenew_centered",
+                 "Total Emissions\n(metric tonnes CO2e) logged" = "log_Emission")
 
 export_summs(full_model, centered_model, centered_model_log,
              error_format = "(p = {p.value})",
              error_pos = "same",
              model.names = c("Initial\n(cases per capita)", 
                              "Centered\n(cases per capita)",
-                             "Centered, logged\n(cases per capita)"))
+                             "logged\n(cases per capita)"),
+             coefs = coeff_names)
 ```
 
+The R-value remains the same as the initial and centered models. Additionally, it is rather high at 0.45. This suggests that the model was quite good to begin with. The p value for total emissions improved slightly from 0.29 to 0.23, however, this still proves that there is no significant relationship between total emissions and well-being score within a 90 or 95 percent confidence interval. 
 
+For practical purposes, we think that the mean centering model is more useful since it provides a practical prediction of a well-being score for a C40 city. On the other hand, The logarithmic transformation did not return a better model fit, and we would still not use the predicted well-being score based on total emissions as the relationship between the two is insignificant. 
