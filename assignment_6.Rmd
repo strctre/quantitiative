@@ -494,7 +494,7 @@ export_summs(full_model, centered_model, centered_model_log,
              error_pos = "same",
              model.names = c("Initial", 
                              "Centered",
-                             "logged"),
+                             "logged\nCentered"),
              coefs = coeff_names)
 ```
 
@@ -533,14 +533,15 @@ interaction_model_2 <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew_centere
 export_summs(centered_model_log, interaction_model, interaction_model_2,
              error_format = "(p = {p.value})",
              error_pos = "same",
-             model.names = c("logged",
+             model.names = c("logged\nCentered",
                              "Effect of Completion of\nVulnerability Assessment",
                              "Effect of\nC40 Status"),
              coefs = coeff_names_interaction)
 ```
 
 
-While the model gives us a better fit when we interact the completion of vulnerability assessment with the percentage of energy use from renewable sources, the relationship is not strong. 
+While the model  gives us a better fit when we interact the completion of vulnerability assessment with the percentage of energy use from renewable sources, the relationship is not strong given the high p values of 0.20 and 0.34. In other words, regardless of a city being in the progress of completing, has completed, or has not conducted vulnerability assessment, does not have a significant impact on the relationship between percentage of energy use from renewable sources and the well-being score. This insignificant relationship is shown in the graph below. 
+
 ```{r}
 interact_plot(interaction_model, pred = PercentRenew_centered, modx = Vadone,
               interval = TRUE) +
@@ -550,6 +551,7 @@ interact_plot(interaction_model, pred = PercentRenew_centered, modx = Vadone,
   scale_y_continuous(name = "Predicted Well-being score")
 ```
 
+The R2 value of the C40-percentage of energy use from renewable sources interaction model does not change from the original logged Centered model remaining at 0.45. The relationship is stronger and positive at 90 percent confidence level in C40 cities than in non-C40 cities, which has a negative and very close-to-zero coefficient. This relationship is visualized below. Interestingly, non-C40 cities seem to have a higher predicted well-being score than C40 cities irrespective of percentage of energy use from renewable sources.  
 
 ```{r}
 interact_plot(interaction_model_2, pred = PercentRenew_centered, modx = C40_Status,
@@ -558,30 +560,5 @@ interact_plot(interaction_model_2, pred = PercentRenew_centered, modx = C40_Stat
                      labels = round(breaks * 1 + mean(data_log$PercentRenew_centered, na.rm = TRUE)),
                      name = "Percentage of Energy Use from Renewable Sources") +
   scale_y_continuous(name = "Predicted Well-being score")
-```
-```
-
-Curious about whether the commencement of vulnerability assessment, which is a binary variable, instead of completion of vulnerability assessment which has three levels, would change the model fit, we conducted the following to examine. It appears that the interaction does not improve the model fit, giving us a R value of 0.45 compared to the earlier 0.48. 
-
-```{r}
-coeff_names_interaction_2 <- c("Constant" = "(Intercept)",
-                 "Non-C40 City" = "C40_StatusNo",
-                 "Conducted vulnerability assessment " = "VacommencedYes",
-                 "Population Density\n(per sq km) Centered" = "pop_dens_centered",
-                 "Percentage of Energy Use\nfrom Renewable Sources % Centered" = "PercentRenew_centered",
-                 "Total Emissions\n(metric tonnes CO2e) logged" = "log_Emission")
-
-centered_model_log2 <- lm(WellBeing ~ C40_Status + Vacommenced + PercentRenew_centered + pop_dens_centered + log_Emission, data_log)
-
-interaction_model_3 <- lm(WellBeing ~ C40_Status + Vacommenced + PercentRenew_centered + pop_dens_centered + log_Emission + Vacommenced*PercentRenew_centered, data_log)
-
-interaction_model_4 <- lm(WellBeing ~ C40_Status + Vacommenced + PercentRenew_centered + pop_dens_centered + log_Emission + C40_Status*PercentRenew_centered, data_log)
-
-export_summs(centered_model_log2, interaction_model_3, interaction_model_4,
-             error_format = "(p = {p.value})",
-             error_pos = "same",
-             model.names = c("logged",
-                             "Effect of Commencement\nof Vulnerability Assessment",
-                             "Effect of\nC40 Status"))
 ```
 
