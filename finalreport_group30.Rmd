@@ -1,0 +1,636 @@
+---
+title: "SES 5215 | Analytic Methods of Urban Planning: Quantitative"
+author: "Sai Joshi, Jialei Tang, Yuanzhao Wang "
+date: "2021/10/22"
+output: 
+  rmdformats::downcute
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+library(tidyverse)
+library(tidycensus)
+library(readxl)
+library(knitr)
+library(tigris)
+library(sf)
+library(gridExtra)
+library(jtools)
+library(interactions)
+```
+# Introduction
+
+## Research Question
+
+Does the environment sustainability status of a city impact the well-being of its citizens?
+
+# Background
+
+There is existing literature on the relationship between well-being and sustainability. Sustainable development, according to Helne, Tuula and Tuuli Hirvilammi in their 2015 article, has been a political catchphrase for nearly 30 years and does not represent a meaningful transition towards sustainability. Traditionally, well-being has been thought of as an economic term. Authors suggested that human well-being relies on the health of the ecosystem, and further proposed a relational, multidimensional and needs-based framework to understand well-being by having, loving, being and doing.
+Additionally, we found a report that examined the issue of well-being, or happiness, or quality of life, in an introspective manner. A 2020 report by De Neve and Krekel, compared the happiness of cities based solely on self-reported quality of life. They considered this approach “democratic” and “bottom-up” which “emancipates respondents to consider and weigh for themselves which factors – observable or unobservable to researchers – they feel matter most to them.” This finding, while completely subjective, aligns with other ranks that considers external factors. In this report, Scandinavian and Oceania cities score high while cities with political volatility score low. It is interesting to compare this finding to our research, or extend the survey to question if city dwellers consider sustainability as part of their well-being.
+
+# Data
+
+We identified the following as our variables:
+Categorical Variables (2)
+
+* Vulnerability Assessment 
+
+The vulnerability assessment is a survey by the CDP,  which offers a voluntary climate change reporting platform for cities. The survey asks if cities have conducted a climate change risk or vulnerability assessment for their respective  local government areas in 2017.
+
+* C40 Status
+
+C40 is a network of mayors of nearly 100 world-leading cities collaborating to deliver the urgent action needed right now to confront the climate crisis. Whether a city has C40 status (Yes/No) depends on whether the city has met the C40 Leadership Standards as membership is by performance only. The standards are :
+
+1. Adopted a resilience and inclusive climate action plan aligned with the 1.5 degree celsius of the Paris Agreement and updates it regularly.
+2. On track to deliver its climate action plan, contributing to increased resilience, equitable outcomes and halving C40’s overall emissions by 2030. 
+3. Uses necessary financial, regulatory and other tools to address climate crisis and mainstrams their equitable climate targets into the most impactful city decision-making processes
+4. City innovates and starts taking inclusive and resilience action beyond the direct control of the city government, such as consumption behavior in their city
+5. Mayor and city demonstrate global climate leadership and inspire others to act in support of the Paris Agreement
+
+
+Continuous Variables (4)
+
+* Emissions
+
+The emissions are taken from a CDP report in 2021, which includes records of various years from 2012-2020. It accounts for the direct and indirect emissions of metric tonnes of CO2e, including total generation of grid supplied energy within and out of the city boundaries.
+
+* Well-being index 
+
+* Population density
+
+Population density is the number of people who live in one square kilometer of a city, i.e. population / land area of city in square kilometers
+
+* Percentage of Energy Use from Renewable Sources
+
+The data set is provided by CDP. It tabulates the percentage of energy use from Coal, Oil, Nuclear, Hydro, Biomass, Geothermal, Solar and Others. The data figures range from 2013-2020 depending on the city. For our research, we calculated the percentage of energy renewable sources by summing the percentages of energy use from Nuclear, Hydro, Biomass, Geothermal, Solar and Other Sources.
+
+# Methods
+
+
+## Sample population
+
+The cities of which data on well-being, emissions, energy mix, vulnerability assessment and  could be obtained.
+
+## Variables
+
+### Categorical Variables (2)
+
+* Vulnerability Assessment 
+* C40 Status
+
+### Continuous Variables (4)
+
+* Emissions
+* Well-being index 
+* Population density
+* Percentage of Energy Use from Renewable Sources
+
+## Number of observations (rows) in our data set
+
+```{r, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+main <- st_read("values_variablesonly.xlsx")
+total <- st_read("combinedmain_valuesonlyr.csv")
+```
+
+Number of Observations: 
+
+291 Observations (Rows/Cities)
+
+In our preliminary round of research, we identified 45 out of 292 cities that can provide us with data on the well-being index. There are 9 cities which did not have total carbon emissions reported. We accounted for the gaps by gathering the emissions numbers for the cities that did not have that data in the first data set. 
+
+We intend to collate further data to include in the event that the number of cities are insufficient for analysis.
+```{r, warning = FALSE, message = FALSE, echo = TRUE}
+kable(head(total))
+```
+```{r, warning = FALSE, message = FALSE, echo = TRUE}
+kable(head(main))
+```
+## Reading our data
+
+### Continuous variables:
+
+* Emissions 
+* Well-being index 
+* Population density
+* Energy Mix (Source of electricity) 
+
+```{r read xlsx, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+data <- read_xlsx(path = "values_variablesonly.xlsx", 
+                      sheet = "Sheet1") %>%
+  mutate(log_emissions = log(TotalEmissions))
+energy_t_test <- t.test(data$PercentRenew)
+dens_t_test <- t.test(data$PopulationDensity)
+emission_t_test <- t.test(data$TotalEmissions)
+wellbeing_t_test <- t.test(data$WellBeing)
+```                  
+
+
+```{r calculate continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+
+energy_quartiles <- quantile(data$PercentRenew, na.rm = TRUE)
+dens_quartiles <- quantile(data$PopulationDensity, na.rm = TRUE)
+emission_quartiles <- quantile(data$TotalEmissions, na.rm = TRUE)
+wellbeing_quartiles <- quantile(data$WellBeing, na.rm = TRUE)
+
+energy_dev <- sd(data$PercentRenew, na.rm = TRUE)
+dens_dev <- sd(data$PopulationDensity, na.rm = TRUE)
+emission_dev <- sd(data$TotalEmissions, na.rm = TRUE)
+wellbeing_dev <- sd(data$WellBeing, na.rm = TRUE)
+
+energy_hist <- ggplot(data) +
+  geom_histogram(aes(x = PercentRenew),
+                 bins = 30)
+
+dens_hist <- ggplot(data) +
+  geom_histogram(aes(x = PopulationDensity),
+                 bins = 30) +
+  scale_x_continuous(trans = "log")
+
+emission_hist <- ggplot(data) +
+  geom_histogram(aes(x = log_emissions),
+                 bins = 30)
+
+wellbeing_hist <- ggplot(data) +
+  geom_histogram(aes(x = WellBeing),
+                 bins = 30)
+```
+
+
+```{r display continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+
+cont_summary <- tibble(`Variable` = c("Percentage of Energy Use from Renewable Sources", 
+               "Population density (people per square kilometers)", 
+               "Total Emissions (metric tonnes CO2e)",
+               "Well-being scores"),
+
+`Sample mean` = c(energy_t_test$estimate,
+                    dens_t_test$estimate,
+                    emission_t_test$estimate,
+                    wellbeing_t_test$estimate* 1000),
+
+`Population mean (95% confidence) - low` = 
+    c(energy_t_test$conf.int[1],
+      dens_t_test$conf.int[1],
+      emission_t_test$conf.int[1],
+      wellbeing_t_test$conf.int[1]* 1000),
+`Population mean (95% confidence) - high` =
+    c(energy_t_test$conf.int[2],
+      dens_t_test$conf.int[2],
+      emission_t_test$conf.int[2],
+      wellbeing_t_test$conf.int[2] * 1000),
+`Median` = c(energy_quartiles[3],
+             dens_quartiles[3],
+             emission_quartiles[3],
+             wellbeing_quartiles[3] * 1000),
+`Interquartile range` = c(energy_quartiles[4] - energy_quartiles[2],
+                            dens_quartiles[4] - dens_quartiles[2],
+                            emission_quartiles[4] - emission_quartiles[2],
+                            wellbeing_quartiles[4] - wellbeing_quartiles[2]* 1000),
+`Standard deviation` = c(energy_dev,
+                          dens_dev,
+                          emission_dev,
+                          wellbeing_dev* 1000))
+
+kable(cont_summary, digits = 0)
+```
+
+```{r display histograms, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+
+pretty_energy_hist <- energy_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Percentage of Energy Use\nfrom Renewable Sources") +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+pretty_dens_hist <- dens_hist +
+  theme_bw() + 
+  scale_x_continuous(name = "Population density\n(residents per square kilometer)",
+                     trans = "log",
+                     breaks = c(0.1, 1, 10, 100, 1000, 10000),
+                     labels = c("0.1", "1", "10", "100", "1000", "10,000")) +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+pretty_emission_hist = emission_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Total Emissions (log(Metric Tonnes CO2e))") +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90)) 
+
+pretty_wellbeing_hist = wellbeing_hist +
+  theme_bw() +
+  scale_x_continuous(name = "Well-being scores") +
+  scale_y_continuous(name = "Number of cities") +
+  theme(axis.text.x = element_text(angle = 90))
+
+grid.arrange(pretty_energy_hist, pretty_dens_hist, pretty_emission_hist, pretty_wellbeing_hist,
+             ncol = 2, nrow = 2)
+```
+
+## Sample Proportion for each Category
+
+### Categorical variables:
+
+* Vulnerability Assessment
+* C40 Status
+
+```{r}
+pct_C40 <- t.test(main$C40_Status == "C40")
+pct_nonC40 <- t.test(main$C40_Status == "No")
+```
+
+```{r}
+cat_summary_C40 <- tibble(`C40 Cities` = 
+                              c("C40",
+                                "Non C40"),
+                            `Sample proportion` = 
+                              c(pct_C40$estimate * 100,
+                                pct_nonC40$estimate *100),
+                            `95-percent confidence - low` = 
+                              c(pct_C40$conf.int[1] * 100,
+                                pct_nonC40$conf.int[1] * 100),
+                            `95-percent confidence - high` = 
+                              c(pct_C40$conf.int[2] * 100,
+                                pct_nonC40$conf.int[2] * 100))
+
+kable(cat_summary_C40, digits = 0)
+```
+
+### The 95-percent confidence interval for the population proportion in each category
+
+```{r}
+pct_VAdone <- t.test(main$Vadone == "Yes")
+pct_VAinprogress <- t.test(main$Vadone == "In progress")
+pct_VAno <-  t.test(main$Vadone == "No")
+```
+
+```{r}
+
+cat_summary_VAdone <- tibble(`Conducted Vulnerability Assessment?` = 
+                              c("Yes",
+                                "In Progress",
+                                "No"),
+                            `Sample proportion` = 
+                              c(pct_VAdone$estimate * 100,
+                                pct_VAinprogress$estimate * 100,
+                                pct_VAno$estimate * 100),
+                            `95-percent confidence - low` = 
+                              c(pct_VAdone$estimate * 100,
+                                pct_VAinprogress$estimate * 100,
+                                pct_VAno$estimate * 100),
+                            `95-percent confidence - high` = 
+                              c(pct_VAdone$conf.int[2] * 100,
+                                pct_VAinprogress$conf.int[2] * 100,
+                                pct_VAno$conf.int[2] * 100))
+
+kable(cat_summary_VAdone, digits = 0)
+```
+
+
+## Bivariate analysis
+### Correlations / regression on continuous variables
+Well-being is our key variable. The components of the well-being index are
+
+* Annual hours of sunshine hours
+* Access to green space
+* Crime
+* Traffic congestion
+* Happiness
+* Quality of healthcare
+* Work-life Balance
+* Governance 
+
+We recognize the limitations of this index and remain critical of its representation of the quality of life of citizens in the cities examined. Nevertheless, it is an interesting study and we are curious if the continuous and categorical variables we've identified can give the index more context as we establish its relationships to these variables.
+
+In this exercise, we would like to investigate the correlations between 
+
+* well-being and emissions
+* well-being and population density
+* well-being and energy-mix
+* population and emissions 
+* emissions and energy-mix
+
+### Well-being and emissions
+
+The p-value is more than 0.05 at 0.3891, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ WellBeing + TotalEmissions, data = main)
+```
+
+```{r}
+wb_emissions_model <- lm(WellBeing ~ TotalEmissions, data = main)
+
+summary(wb_emissions_model)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = TRUE}
+ggplot(main) +
+  geom_point(aes(x = TotalEmissions, 
+                 y = WellBeing,
+                 size = TotalEmissions),
+             alpha = 0.25) +
+  labs(y="Well-being Score", x = "Total Emissions (Metric Tonnes CO2e)", size = "Total Emissions\n(Metric Tonnes CO2e)") +
+  theme_bw()
+```
+
+
+### Well-being and population density
+
+The p-value is more than 0.05 at 0.3906, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ WellBeing + PopulationDensity, data = main)
+```
+
+```{r}
+wb_popdens_model <- lm(WellBeing ~ PopulationDensity, data = main)
+
+summary(wb_popdens_model)
+```
+
+### Well-being and energy mix
+
+The p-value is less than 0.05 at 0.000009851, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is positive, which suggests that the relationship is direct.
+
+This result is interesting and it could be suggesting that cleaner cities provide better conditions for a higher well-being.
+
+```{r}
+cor.test(~ WellBeing + PercentRenew, data = main)
+```
+
+```{r}
+wb_energy_model <- lm(WellBeing ~ PercentRenew, data = main)
+
+summary(wb_energy_model)
+```
+
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = TRUE}
+ggplot(main) +
+  geom_point(aes(x = PercentRenew, 
+                 y = WellBeing),
+             alpha = 0.25) +
+  labs(y="Well-being Score", x = "Percentage of Energy Use from Renewable Sources") +
+  theme_bw()
+```
+
+### Population density and emissions
+
+The p-value is more than 0.05 at 0.4849, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+```{r}
+cor.test(~ PopulationDensity + TotalEmissions, data = main)
+```
+
+```{r}
+popdens_te_model <- lm(PopulationDensity ~ TotalEmissions, data = main)
+
+summary(popdens_te_model)
+```
+
+### Emissions and energy mix
+
+The p-value is less than 0.05 at 0.0105, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is negative (it does not include zero), which suggests that the relationship is inverse.
+
+```{r}
+cor.test(~ TotalEmissions + PercentageRenewable, data = data)
+```
+
+```{r}
+te_energy_model <- lm(TotalEmissions ~ PercentageRenewable, data = main)
+
+summary(te_energy_model)
+```
+
+
+## Difference in means / regression on categorical variables
+
+### Well-being and c40 status
+
+The p-value is more than 0.05 at 0.2037, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
+
+```{r}
+t.test(WellBeing ~ C40_Status, main)
+```
+
+
+```{r}
+wb_c40_model <- lm(WellBeing ~ C40_Status, data = main)
+
+summary(wb_c40_model)
+
+```
+
+
+### Well-being and status of vulnerability assessment
+
+The p-value is less than 0.05 at 0.03 for the regression test, which means the relationship is significant. 
+In order to run the t-test, a new column defined by whether Vulnerability Assessment was commenced was created, in which all "In progress" cities were changed to "Yes". Here, the p-value is 0.05957, which is greater than 0.05. It suggests that the relationship is not that significant between whether a city has commenced vulnerability assessment and its well-being. The 95 percent confidence interval also includes positive and negative values, which cannot point to the nature of the relationship (direct or inverse). 
+This turns us to focus on the regression test of wellbeing and status of vulnerability assessment of cities (Yes, No, In progress), which is informs us that completion of the vulnerability assessment has a more significant relationship to well-being.
+
+In this light, it appears that cities that have conducted vulnerability assessments are also cities whose citizens have a higher well being score. This could be due to the cities/governments which conduct vulnerability assessments are also more proactive in ensuring the well-being of their citizens.
+
+```{r}
+t.test(WellBeing ~ Vacommenced, data = main)
+```
+
+
+```{r}
+wb_va_model <- lm(WellBeing ~ Vadone, data = main)
+
+summary(wb_va_model)
+
+```
+
+
+## Multivariate Regression
+
+```{r}
+full_model <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew + PopulationDensity + TotalEmissions, main)
+
+summary(full_model)
+```
+
+In our bivariate regression, we derived the equation W = 5.932512 + 0.014506(PR), where W is the well-being score and PR is the percentage of energy use from renewable sources. This means that for percentage of energy use from renewable sources was associated with an increase of about 0.0014506 in the well-being score. When we control for c40 status, vulnerability assessment status, population density and total emissions, we find that relationship is weaker, although still significant with a p-value of 0.00011 compared to 0.000009851 in the bivariate regression. The relation is still positive, coherent with the 95% confidence interval. Ceteris paribus, each 1 percent increase in the percentage of energy use from renewable sources is associated with about 1.450e-02 increase in the well-being score. 
+
+On the other hand, our bivariate regression (linear model) on well-being scores and completion of vulnerability assessment showed that the p-value is 0.03, which suggests that the two have a significant relationship.
+Once we’ve controlled for our other variables, we find that relationship is actually weaker, in which the p-value is 0.26269 for cities that have completed vulnerability assessments. In this model, completion of vulnerability assessment appears to be associated to a decrease in well-being scores of -2.819e-01 (which is approximately -0.80529) but this relationship is insignificant given its high p-value.
+
+
+The only significant relationship observed in the multivariate model is between the well-being score and the percentage of energy use from renewable sources. Apart from the well-being scores and completion of vulnerability assessment, relationships between well-being scores and other independent variables, namely C40 Status, population density and total emissions, cohere with our results from the earlier bivariate regression as insignificant.
+
+## Transformations
+
+### Linear Transformations
+
+Mean Centering 
+
+In the earlier multivariate regression, the intercept predicted the well-being score for a C40 city while assuming zero values for emissions, population density, percentage of energy use from renewable sources, and a null value for vulnerability assessment status. This value is unrealistic. Through mean centering, we are able to predict a well-being score for a C40 city that assumes the average value of the other independent variables. 
+
+A city that uses  less-than-average percentage energy from renewable sources would have a negative value and a city that uses more-than-average percentage energy from renewable sources would have a positive value. The same holds for population density.
+
+The regression coefficents remain the same, but the intercept increased from 6.10 to 6.75. It refers to a C40 city average in terms of average percentage energy from renewable sources, population density, and total emissions. 
+
+The R-Value does not change and remains at 0.45 in this linear transformation.
+```{r}
+centered_data <- main %>%
+  mutate(pop_dens_centered = PopulationDensity - mean(PopulationDensity, na.rm=TRUE),
+         TotalEmissions_centered = TotalEmissions - mean(TotalEmissions, na.rm=TRUE),
+         PercentRenew_centered = PercentRenew - mean(PercentRenew, na.rm=TRUE))
+
+
+centered_model <- lm(WellBeing ~ C40_Status + Vadone + pop_dens_centered + TotalEmissions_centered + PercentRenew_centered, centered_data)
+
+coeff_names <- c("Constant" = "(Intercept)",
+                 "Non-C40 City" = "C40_StatusNo",
+                 "No vulnerability assessment done" = "VadoneNo",
+                 "Conducted vulnerability assessment " = "VadoneYes",
+                 "Percentage of Energy Use from Renewable Sources %" = "PercentRenew",
+                 "Population Density (per sq km)" = "PopulationDensity", 
+                 "Total Emissions  (metric tonnes CO2e)" = "TotalEmissions",
+                 "Population Density (per sq km) Centered" = "pop_dens_centered",
+                 "Total Emissions (metric tonnes CO2e) centered" = "TotalEmissions_centered",
+                 "Percentage of Energy Use from Renewable Sources % Centered" = "PercentRenew_centered")
+
+export_summs(full_model, centered_model, 
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("Initial", "Centered"),
+             coefs = coeff_names)
+```
+
+### Non-Linear transformations
+
+Logarithmic Transformation
+
+In the preliminary examination of our dataset (see histograms in "Reading our data" section), we conducted a logarithmic transform for total emissions to visualize it in the histogram to see a better distribution.  We did not use the logged values in subsequent analysis. Here, we apply a logarithmic transformation in the multivariate regression. We used a base of 2 for the log, the interpretation of that coefficient will be the effect of doubling total emissions. 
+
+```{r}
+data_log <- centered_data %>%
+  mutate(log_Emission = log(TotalEmissions), base = 2)
+
+                   
+centered_model_log <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew_centered + pop_dens_centered + log_Emission, data_log)
+
+coeff_names <- c("Constant" = "(Intercept)",
+                 "Non-C40 City" = "C40_StatusNo",
+                 "No vulnerability assessment done" = "VadoneNo",
+                 "Conducted vulnerability assessment " = "VadoneYes",
+                 "Percentage of Energy Use\nfrom Renewable Sources %" = "PercentRenew",
+                 "Population Density (per sq km)" = "PopulationDensity", 
+                 "Total Emissions\n(metric tonnes CO2e)" = "TotalEmissions",
+                 "Population Density\n(per sq km) Centered" = "pop_dens_centered",
+                 "Total Emissions\n(metric tonnes CO2e) centered" = "TotalEmissions_centered",
+                 "Percentage of Energy Use\nfrom Renewable Sources % Centered" = "PercentRenew_centered",
+                 "Total Emissions\n(metric tonnes CO2e) logged" = "log_Emission")
+
+export_summs(full_model, centered_model, centered_model_log,
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("Initial", 
+                             "Centered",
+                             "logged\nCentered"),
+             coefs = coeff_names)
+```
+
+The R-value remains the same as the initial and centered models. Additionally, it is rather high at 0.45. This suggests that the model was quite good to begin with. The p value for total emissions improved slightly from 0.29 to 0.23, however, this still proves that there is no significant relationship between total emissions and well-being score within a 90 or 95 percent confidence interval. 
+
+For practical purposes, we think that the mean centering model is more useful since it provides a practical prediction of a well-being score for a C40 city. On the other hand, The logarithmic transformation did not return a better model fit, and we would still not use the predicted well-being score based on total emissions as the relationship between the two is insignificant. 
+
+```{r}
+effect_plot(centered_model, pred = PercentRenew_centered, interval = TRUE) +
+  scale_y_continuous(name = "Well-being Score") +
+  scale_x_continuous(name = "Percentage of Energy Use from Renewable Sources (Centered)")
+```
+
+
+## Interaction
+
+### Vulnerability Assessment and Total Emissions 
+
+Based on the results above, the only significant relationship is between well-being scores and percentage of energy use from renewable sources. We are interested in whether the 1) completion of vulnerability assessment by a city and 2) C40 status will change that relationship.For this, we will use the logged centered model since we are investigating the percentage of energy from renewable sources. 
+
+```{r}
+coeff_names_interaction <- c("Constant" = "(Intercept)",
+                 "Non-C40 City" = "C40_StatusNo",
+                 "No vulnerability assessment done" = "VadoneNo",
+                 "Conducted vulnerability assessment " = "VadoneYes",
+                 "Population Density\n(per sq km) Centered" = "pop_dens_centered",
+                 "Percentage of Energy Use\nfrom Renewable Sources % Centered" = "PercentRenew_centered",
+                 "Total Emissions\n(metric tonnes CO2e) logged" = "log_Emission",
+                 "Effect of non-completed VA" = "VadoneNo:PercentRenew_centered",
+                 "Effect of completed VA" = "VadoneYes:PercentRenew_centered",
+                 "Effect of non-C40 Status" = "C40_StatusNo:PercentRenew_centered")
+
+interaction_model <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew_centered + pop_dens_centered + log_Emission + Vadone*PercentRenew_centered, data_log)
+
+interaction_model_2 <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew_centered + pop_dens_centered + log_Emission + C40_Status*PercentRenew_centered, data_log)
+
+export_summs(centered_model_log, interaction_model, interaction_model_2,
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("logged\nCentered",
+                             "Effect of Completion of\nVulnerability Assessment",
+                             "Effect of\nC40 Status"),
+             coefs = coeff_names_interaction)
+```
+
+
+While the model  gives us a better fit when we interact the completion of vulnerability assessment with the percentage of energy use from renewable sources, the relationship is not strong given the high p values of 0.20 and 0.34. In other words, regardless of a city being in the progress of completing, has completed, or has not conducted vulnerability assessment, does not have a significant impact on the relationship between percentage of energy use from renewable sources and the well-being score. This insignificant (and inconsistent) relationship is shown in the graph below. 
+
+```{r}
+interact_plot(interaction_model, pred = PercentRenew_centered, modx = Vadone,
+              interval = TRUE) +
+  scale_x_continuous(breaks = breaks <- c(-40, -20, 0, 20, 40, 60, 80, 100),
+                     labels = round(breaks * 1 + mean(data_log$PercentRenew_centered, na.rm = TRUE)),
+                     name = "Percentage of Energy Use from Renewable Sources") +
+  scale_y_continuous(name = "Predicted Well-being score")
+```
+
+The R2 value of the C40-percentage of energy use from renewable sources interaction model does not change from the original logged Centered model remaining at 0.45. The relationship is stronger and positive at 90 percent confidence level in C40 cities than in non-C40 cities, which has a negative and very close-to-zero coefficient, and an insignificant relationship to well-being score given the high p-value of 0.69. This relationship is visualized below. Interestingly, non-C40 cities seem to have a higher predicted well-being score than C40 cities irrespective of percentage of energy use from renewable sources, converging as percentage of renewable energy use increases.
+
+```{r}
+interact_plot(interaction_model_2, pred = PercentRenew_centered, modx = C40_Status,
+              interval = TRUE) +
+  scale_x_continuous(breaks = breaks <- c(-40, -20, 0, 20, 40, 60, 80, 100),
+                     labels = round(breaks * 1 + mean(data_log$PercentRenew_centered, na.rm = TRUE)),
+                     name = "Percentage of Energy Use from Renewable Sources") +
+  scale_y_continuous(name = "Predicted Well-being score")
+```
+
+# Discussion
+
+Our results do not fully support our hypothesis which claimed that sustainability of a city has a significant relationship to the well-being of its residents.
+
+We expected to identify correlations between wellbeing and total emission and the status of whether the city claimed to join the C40 sustainable program. However, we find there is no significant relationship. It might be interpreted that the claims for sustainability development are more of a political catchphrase or a start point of a long-term sustainable transition of cities. We found a positive relationship between the use of renewable energy and well-being that supports our assumption that environmental sustainability could benefit the well-being of citizens. In addition, we also found a negative relationship between total emissions and the percentage of energy use from renewable sources that supports the general assumption that the more frequent use of renewable energy could reduce the total CO2 emission. Also, cities that have conducted vulnerability assessments are also cities whose citizens have a higher well being score. This could be due to the cities/governments which conduct vulnerability assessments are also more proactive in ensuring the well-being of their citizens.
+
+
+Limitations and Weakness
+
+In terms of limitations and weakness, we must keep in mind that any significant relationship we found did not imply causation between these variables. We inferred that more usage of renewable energy leads to higher well-being scores, but a closer examination of the hidden relationship between the variables and the chosen indices is needed. Several transformations of data have been conducted, however, the fitness (R2 value) has remained unchanged at 0.45. The possible reason might be the lack of other control variables that can contribute to the regression model. To be more specific, the current regression model lacks some traditional control variables for well-being indices such as GDP, income, education level, and so on, which can describe people's overall economic situation and life satisfaction that were previously considered relevant factors. For further analysis, we would include the traditional control variables for well-being indices such as GDP, income, education level in the regression model to see if the model fit improves.
+
+Possible alternatives
+
+In our preliminary round of research, we found 184 cities with well-being scores, 494 cities with vulnerability assessment status and emissions, and 776 cities with percentage of energy use from renewable sources. By filtering the cities with all the variables’ information, we were ultimately left with 45. We believe it would be interesting to analyze the gaps of information and the cities with those missing gaps. The model could compare the cities with well-being scores and only 1 or more sustainability-related variable’s information and examine if any significant relationships exist. For cities without well-being scores, an alternative model with other well-being ranking data, at city level or country level, could be used to investigate any significance in the relationships.
+
+# Conclusion
+
+# Bibliography
+
+“2017 - Cities Vulnerability Assessment: CDP Open Data Portal.” 2017 - Cities Vulnerability Assessment | CDP Open      Data Portal, September 28, 2018.         
+     https://data.cdp.net/Climate-Hazards/2017-Cities-Vulnerability-Assessment/yvii-ygtz. 
+
+“2020 Cities Percentage Energy Mix: CDP Open Data Portal.” 2020 Cities Percentage Energy Mix | CDP Open Data           Portal, February 26, 2021. https://data.cdp.net/Renewable-Energy/2020-Cities-Percentage-Energy-Mix/ss3g-7c4g.
+
+“2021 City-Wide Emissions: CDP Open Data Portal.” 2021 City-wide Emissions | CDP Open Data Portal, October 4,         2021. https://data.cdp.net/Emissions/2021-City-wide-Emissions/tmta-7i7p. 
+
+“About C40.” C40 Cities, September 24, 2021. https://www.c40.org/about-c40/. 
+
+De Neve, Jan-Emmanuel, and Christian Krekel. “Cities and Happiness: A Global Ranking and Analysis.” Cities and        Happiness: A Global Ranking and Analysis. Sustainable Development Solutions Network, March 20, 2020. 
+    https://worldhappiness.report/ed/2020/cities-and-happiness-a-global-ranking-and-analysis/. 
+
+Helne, Tuula, and Tuuli Hirvilammi. “Wellbeing and Sustainability: A Relational Approach.” Sustainable Development     23, no. 3 (2015): 167–75. https://doi.org/10.1002/sd.1581. 
+
+Knight Frank Research. “The Wealth Report 2021: Knight Frank.” Edited by Andrew Shirley. Global Real Estate           Consultants, 2020. https://www.knightfrank.com/wealthreport. 
