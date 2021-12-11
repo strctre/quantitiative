@@ -3,14 +3,15 @@ title: "SES 5215 | Analytic Methods of Urban Planning: Quantitative"
 author: "Sai Joshi, Jialei Tang, Yuanzhao Wang "
 date: "2021/10/22"
 output: 
-  rmdformats::downcute
+  rmdformats::downcute:
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
 ```
 
-```{r, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+```{r}
 library(tidyverse)
 library(tidycensus)
 library(readxl)
@@ -70,7 +71,6 @@ The data set is provided by CDP. It tabulates the percentage of energy use from 
 
 # Methods
 
-
 ## Sample population
 
 The cities of which data on well-being, emissions, energy mix, vulnerability assessment and  could be obtained.
@@ -91,7 +91,7 @@ The cities of which data on well-being, emissions, energy mix, vulnerability ass
 
 ## Number of observations (rows) in our data set
 
-```{r, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 main <- st_read("values_variablesonly.xlsx")
 total <- st_read("combinedmain_valuesonlyr.csv")
 ```
@@ -103,10 +103,10 @@ Number of Observations:
 In our preliminary round of research, we identified 45 out of 292 cities that can provide us with data on the well-being index. There are 9 cities which did not have total carbon emissions reported. We accounted for the gaps by gathering the emissions numbers for the cities that did not have that data in the first data set. 
 
 We intend to collate further data to include in the event that the number of cities are insufficient for analysis.
-```{r, warning = FALSE, message = FALSE, echo = TRUE}
+```{r}
 kable(head(total))
 ```
-```{r, warning = FALSE, message = FALSE, echo = TRUE}
+```{r}
 kable(head(main))
 ```
 ## Reading our data
@@ -118,7 +118,7 @@ kable(head(main))
 * Population density
 * Energy Mix (Source of electricity) 
 
-```{r read xlsx, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+```{r read xlsx}
 data <- read_xlsx(path = "values_variablesonly.xlsx", 
                       sheet = "Sheet1") %>%
   mutate(log_emissions = log(TotalEmissions))
@@ -129,7 +129,7 @@ wellbeing_t_test <- t.test(data$WellBeing)
 ```                  
 
 
-```{r calculate continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+```{r calculate continuous variables}
 
 energy_quartiles <- quantile(data$PercentRenew, na.rm = TRUE)
 dens_quartiles <- quantile(data$PopulationDensity, na.rm = TRUE)
@@ -160,7 +160,7 @@ wellbeing_hist <- ggplot(data) +
 ```
 
 
-```{r display continuous variables, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+```{r display continuous variables}
 
 cont_summary <- tibble(`Variable` = c("Percentage of Energy Use from Renewable Sources", 
                "Population density (people per square kilometers)", 
@@ -198,7 +198,7 @@ cont_summary <- tibble(`Variable` = c("Percentage of Energy Use from Renewable S
 kable(cont_summary, digits = 0)
 ```
 
-```{r display histograms, warning = FALSE, message = FALSE, echo = TRUE, results = TRUE}
+```{r display histograms}
 
 pretty_energy_hist <- energy_hist +
   theme_bw() +
@@ -317,17 +317,17 @@ In this exercise, we would like to investigate the correlations between
 ### Well-being and emissions
 
 The p-value is more than 0.05 at 0.3891, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 cor.test(~ WellBeing + TotalEmissions, data = main)
 ```
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 wb_emissions_model <- lm(WellBeing ~ TotalEmissions, data = main)
 
 summary(wb_emissions_model)
 ```
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE, results = TRUE}
+```{r}
 ggplot(main) +
   geom_point(aes(x = TotalEmissions, 
                  y = WellBeing,
@@ -341,11 +341,11 @@ ggplot(main) +
 ### Well-being and population density
 
 The p-value is more than 0.05 at 0.3906, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 cor.test(~ WellBeing + PopulationDensity, data = main)
 ```
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 wb_popdens_model <- lm(WellBeing ~ PopulationDensity, data = main)
 
 summary(wb_popdens_model)
@@ -380,11 +380,11 @@ ggplot(main) +
 ### Population density and emissions
 
 The p-value is more than 0.05 at 0.4849, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 cor.test(~ PopulationDensity + TotalEmissions, data = main)
 ```
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 popdens_te_model <- lm(PopulationDensity ~ TotalEmissions, data = main)
 
 summary(popdens_te_model)
@@ -394,11 +394,11 @@ summary(popdens_te_model)
 
 The p-value is less than 0.05 at 0.0105, which means the relationship is significant. This is also clear from the fact that the entire 95-percent confidence interval is negative (it does not include zero), which suggests that the relationship is inverse.
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 cor.test(~ TotalEmissions + PercentageRenewable, data = data)
 ```
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 te_energy_model <- lm(TotalEmissions ~ PercentageRenewable, data = main)
 
 summary(te_energy_model)
@@ -411,12 +411,12 @@ summary(te_energy_model)
 
 The p-value is more than 0.05 at 0.2037, which means the relationship is insignificant. This is also clear from the fact that the entire 95-percent confidence interval is both positive and negative, which suggests that the relationship is neither inverse or direct.
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 t.test(WellBeing ~ C40_Status, main)
 ```
 
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 wb_c40_model <- lm(WellBeing ~ C40_Status, data = main)
 
 summary(wb_c40_model)
@@ -432,12 +432,12 @@ This turns us to focus on the regression test of wellbeing and status of vulnera
 
 In this light, it appears that cities that have conducted vulnerability assessments are also cities whose citizens have a higher well being score. This could be due to the cities/governments which conduct vulnerability assessments are also more proactive in ensuring the well-being of their citizens.
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 t.test(WellBeing ~ Vacommenced, data = main)
 ```
 
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 wb_va_model <- lm(WellBeing ~ Vadone, data = main)
 
 summary(wb_va_model)
@@ -447,7 +447,7 @@ summary(wb_va_model)
 
 ## Multivariate Regression
 
-```{r}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 full_model <- lm(WellBeing ~ C40_Status + Vadone + PercentRenew + PopulationDensity + TotalEmissions, main)
 
 summary(full_model)
